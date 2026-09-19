@@ -339,7 +339,7 @@ Triggered on every push to `main` / `master`, plus manually via **workflow_dispa
 
 ### The two commands that matter
 
-**`npx cap sync android`**
+**`npm run sync:android`**
 Copies `src/*` into `android/app/src/main/assets/public/`, regenerates `capacitor.config.json` / `capacitor.plugins.json` inside the Android project, and registers native plugin classpaths. This is the step that wires `app.js` to `VolumeButtonsPlugin`.
 
 ```mermaid
@@ -351,7 +351,7 @@ flowchart LR
         S4["package.json deps"]
     end
 
-    SYNC{{"npx cap sync android"}}
+    SYNC{{"npm run sync:android"}}
 
     subgraph AFTER["Generated into android/"]
         A1["assets/public/*"]
@@ -375,7 +375,7 @@ flowchart LR
     class SYNC cmd
 ```
 
-**`./gradlew assembleDebug`**
+**`npm run build:apk:debug`**
 Android's official build engine: compiles the Java layer, packages the web assets, links AndroidX + Capacitor libraries, and emits one installable file at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ---
@@ -424,11 +424,11 @@ npm install
 ```
 
 ```bash
-npx cap sync android
+npm run sync:android
 ```
 
 ```bash
-cd android && ./gradlew assembleDebug
+npm run build:apk:debug
 ```
 
 Open the native project in Android Studio instead:
@@ -437,7 +437,7 @@ Open the native project in Android Studio instead:
 npx cap open android
 ```
 
-Because `webDir` is `src/` and there is no build step, the edit loop is: change a file in `src/` → `npx cap sync android` → rebuild.
+Because `webDir` is `src/` and there is no build step, the edit loop is: change a file in `src/` → `npm run sync:android` → rebuild.
 
 > **Note:** the volume-button plugin only exists inside the native shell. Opening `src/index.html` in a desktop browser renders the UI fine, but `window.Capacitor.Plugins.VolumeButtons` will never appear and `app.js` will keep retrying every second. Counting can only be tested on a real device or emulator.
 
@@ -463,6 +463,29 @@ No API keys, tokens, credentials, or personal data exist anywhere in this reposi
 
 ---
 
+## Signed Release APK Pipeline (Play Store-ready base)
+
+This repository now includes a manual workflow at:
+
+- `.github/workflows/android-release.yml`
+
+It builds a signed release APK using keystore secrets in GitHub Actions.
+
+### Required GitHub repository secrets
+
+- `ANDROID_KEYSTORE_BASE64` → Base64 content of your `.jks`/`.keystore`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+### Trigger it
+
+1. Open **Actions** → **Build Signed Android APK**
+2. Click **Run workflow**
+3. Download artifact **`Maala-Counter-Release-APK`**
+
+---
+
 ## Known Limitations
 
 | Limitation | Detail |
@@ -470,7 +493,7 @@ No API keys, tokens, credentials, or personal data exist anywhere in this reposi
 | No `VIBRATE` permission declared | `app.js` calls `navigator.vibrate()`, but `AndroidManifest.xml` does not request `android.permission.VIBRATE` — haptic feedback is silently ignored on device. Add the permission (or switch to `@capacitor/haptics`) to enable it. |
 | Fonts load from Google Fonts CDN | `index.html` pulls Noto Sans Devanagari over the network. On a fresh install with no connectivity, the UI falls back to a system font. Self-hosting the `.woff2` would make it truly offline-complete. |
 | No manual correction | There is intentionally no undo, no reset button, and no way to edit a count. Simplicity was chosen over correctability. |
-| Debug signing only | Not Play Store distributable as-is; a release keystore and `assembleRelease` would be needed. |
+| Release upload still manual | Signed release APK is produced, but Play Console upload automation is not configured yet. |
 | Volume Down is unused | Only `direction === 'up'` is handled; Volume Down still changes system volume normally. |
 
 ---
@@ -482,7 +505,7 @@ No API keys, tokens, credentials, or personal data exist anywhere in this reposi
 - [ ] Optional daily/weekly history view with a streak count
 - [ ] Screen-wake lock so the display does not sleep mid-maala
 - [ ] Configurable maala size (108 / 27 / 54)
-- [ ] Signed release build
+- [x] Signed release build pipeline
 
 ---
 
