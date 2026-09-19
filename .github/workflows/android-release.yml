@@ -1,18 +1,14 @@
-name: Build Android APK
+name: Build Signed Android APK
 
 on:
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build APK
+  build-release:
+    name: Build Signed Release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -45,14 +41,27 @@ jobs:
       - name: Sync Capacitor Android
         run: npm run sync:android
 
-      - name: Build Android Debug APK
+      - name: Restore release keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/release.keystore
+
+      - name: Write keystore.properties
+        run: |
+          cat <<EOF > android/keystore.properties
+          storeFile=release.keystore
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          EOF
+
+      - name: Build Signed Release APK
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Upload APK
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: Maala-Counter-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Maala-Counter-Release-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
